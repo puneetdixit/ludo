@@ -197,14 +197,6 @@
     const audio = new SoundController();
 
     const BOARD_SIZE = 15;
-    // Calibrated 15x15 grid column/row weights: base cells (0..5 & 9..14) are compact 0.78fr, track cells (6..8) are 1.44fr (85% larger!)
-    const COL_WEIGHTS = [0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 1.44, 1.44, 1.44, 0.78, 0.78, 0.78, 0.78, 0.78, 0.78];
-    const TOTAL_WEIGHT = COL_WEIGHTS.reduce((a, b) => a + b, 0);
-    const GRID_CENTERS = COL_WEIGHTS.map((w, idx) => {
-      let prior = 0;
-      for (let i = 0; i < idx; i++) prior += COL_WEIGHTS[i];
-      return ((prior + w / 2) / TOTAL_WEIGHT) * 100;
-    });
     const STATE_BASE = -1;
     const STATE_GOAL = 56;
 
@@ -277,6 +269,7 @@
       const [showSetupModal, setShowSetupModal] = useState(true);
       const [showConfirmModal, setShowConfirmModal] = useState(false);
       const [muted, setMuted] = useState(false);
+      const [isFullscreen, setIsFullscreen] = useState(false);
 
       // Turn state
       const [activeColors, setActiveColors] = useState(['red', 'green', 'yellow', 'blue']);
@@ -398,7 +391,7 @@
           setTokensState({ ...tokensState, [color]: pTokens });
           setTimeout(() => {
             finishMoveLogic(color, tokenIndex, 0, currentRoll === 6);
-          }, 110);
+          }, 350);
           return;
         }
 
@@ -417,9 +410,9 @@
             clearInterval(hopInterval);
             setTimeout(() => {
               finishMoveLogic(color, tokenIndex, toPos, currentRoll === 6);
-            }, 60);
+            }, 250);
           }
-        }, 85);
+        }, 140);
       };
 
       const finishMoveLogic = (color, tokenIndex, finalPos, wasSix) => {
@@ -474,7 +467,7 @@
         setTokensState(nextTokensState);
         setTimeout(() => {
           advanceTurn(bonusTurn);
-        }, 60);
+        }, 200);
       };
 
       const advanceTurn = (extraTurn = false) => {
@@ -502,12 +495,50 @@
         setMuted(isMuted);
       };
 
+      // Handle Fullscreen Toggle
+      const handleToggleFullscreen = () => {
+        audio.playButton();
+        const docEl = document.documentElement;
+        const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (!isFS) {
+          if (docEl.requestFullscreen) {
+            docEl.requestFullscreen();
+          } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+          } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
+      };
+
+      // Listen for Fullscreen changes
+      useEffect(() => {
+        const onFullscreenChange = () => {
+          const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+          setIsFullscreen(isFS);
+        };
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+        return () => {
+          document.removeEventListener('fullscreenchange', onFullscreenChange);
+          document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+        };
+      }, []);
+
       // Auto-move if there is only 1 valid token to move after rolling
       useEffect(() => {
         if (!waitingForRoll && !isGameOver && validMoves.length === 1) {
           const autoTimer = setTimeout(() => {
             handleTokenClick(currentColor, validMoves[0]);
-          }, 120);
+          }, 450);
           return () => clearTimeout(autoTimer);
         }
       }, [validMoves, waitingForRoll, isGameOver, currentColor]);
@@ -563,6 +594,9 @@
               <span className="logo-text">DIXIT LUDO</span>
             </div>
             <div className="header-actions">
+              <button className="btn-glass" onClick={handleToggleFullscreen} title="Toggle Fullscreen">
+                {isFullscreen ? '🗗' : '⛶'}
+              </button>
               <button className="btn-glass" onClick={handleToggleSound} title="Toggle Sound">
                 {muted ? '🔇' : '🔊'}
               </button>
@@ -663,6 +697,13 @@
                   onClick={() => startNewGame(playerCount)}
                 >
                   🚀 Start Offline Game
+                </button>
+                <button
+                  className="btn-glass"
+                  style={{ width: '100%', padding: '0.65rem', fontSize: '0.95rem', justifyContent: 'center', marginTop: '0.75rem' }}
+                  onClick={handleToggleFullscreen}
+                >
+                  {isFullscreen ? '🗗 Exit Full Screen' : '⛶ Play in Full Screen'}
                 </button>
               </div>
             </div>
@@ -870,9 +911,9 @@
                 }
               }
 
-              // Left/Top percentage on calibrated 15x15 grid
-              const leftPct = GRID_CENTERS[coords[1]];
-              const topPct = GRID_CENTERS[coords[0]];
+              // Left/Top percentage on 15x15 square grid
+              const leftPct = ((coords[1] + 0.5) / BOARD_SIZE) * 100;
+              const topPct = ((coords[0] + 0.5) / BOARD_SIZE) * 100;
 
               return (
                 <div

@@ -4,12 +4,13 @@
 
 ---
 
-## 📱 Minimal Centered Phone Layout & Expanded Path Track
+## 📱 Minimal Centered Phone Layout & Full Screen Mode
+- **Full Screen Mode (`⛶`)**:
+  - A new **Full Screen Toggle (`⛶` / `🗗`)** button is available in the top-right header at all times, as well as a dedicated **`⛶ Play in Full Screen`** button inside the initial Setup Modal.
+  - Tapping this button requests browser Fullscreen (`requestFullscreen`), immersing you in an edge-to-edge gaming experience without address bars or browser chrome.
 - **Dead-Center Phone Screen Alignment**: On mobile phone screens (`@media (max-width: 600px)`), the entire game workspace (`.app-main`) uses `justify-content: center` and `min-height: calc(100vh - 54px)`, positioning **the Ludo board (`.board-wrapper`) 100% perfectly in the center of the phone screen**!
-- **Maximized Path Size vs. Compact Colour Boxes (`0.78fr` vs `1.44fr`)**:
-  - The 15×15 CSS Grid uses weighted columns and rows (`repeat(6, 0.78fr) repeat(3, 1.44fr) repeat(6, 0.78fr)`).
-  - This makes the 4 corner colour boxes (**Red, Green, Yellow, Blue base yards**) compact and sleek, while making every square on the **path track and home goal 85% larger**!
-  - Tokens and base circles have also been enlarged (`1.18x`) so tokens, stars, and safe squares are huge, vibrant, and effortless to tap on phones.
+- **Uniform Perfectly Square Grid (`repeat(15, 1fr)`)**:
+  - The 15×15 CSS Grid uses equal columns and rows (`repeat(15, 1fr)`) so that every single path square on the board is a **100% identical, mathematically perfect square**.
 - **Pure Corner-Dice Rolling (No Bottom UI Box)**:
   - The bottom controller box has been **completely removed** for a sleek, minimal, distraction-free interface.
   - All gameplay happens directly on the board:
