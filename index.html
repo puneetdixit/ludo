@@ -762,7 +762,10 @@
                 <button
                   className="btn-glass btn-primary"
                   style={{ width: '100%', padding: '0.85rem', fontSize: '1.05rem', justifyContent: 'center' }}
-                  onClick={() => setShowSetupModal(true)}
+                  onClick={() => {
+                    setIsGameOver(false);
+                    setShowSetupModal(true);
+                  }}
                 >
                   🔄 Play Again
                 </button>
