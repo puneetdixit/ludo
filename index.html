@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0a0c14" />
+  <title>Dixit Ludo</title>
+  <meta name="description" content="Play Dixit Ludo offline with 2, 3, or 4 human players. Standard Ludo rules, mobile touch-friendly controls, and glassmorphic aesthetics." />
+  <!-- React 18 & Babel CDN for Offline / S3 Static Play -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/jpeg" href="./assets/logo.jpg" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+    // --- SOUND EFFECTS CONTROLLER (WEB AUDIO API) ---
+    class SoundController {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+      init() {
+        if (!this.ctx && typeof window !== 'undefined') {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) this.ctx = new AudioContextClass();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      toggleMute() {
+        this.muted = !this.muted;
+        if (!this.muted) {
+          this.playButton(); // Play test sound when unmuting
+        }
+        return this.muted;
+      }
+      playButton() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(550, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.06);
+      }
+      playDiceRoll() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        for (let i = 0; i < 7; i++) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(200 + Math.random() * 240, now + i * 0.055);
+          osc.frequency.exponentialRampToValueAtTime(90, now + i * 0.055 + 0.035);
+          gain.gain.setValueAtTime(0.35, now + i * 0.055);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.055 + 0.035);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.055);
+          osc.stop(now + i * 0.055 + 0.045);
+        }
+      }
+      playStep() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(380, now);
+        osc.frequency.exponentialRampToValueAtTime(160, now + 0.07);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.07);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+      playBaseExit() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [523.25, 659.25];
+        freqs.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + i * 0.08);
+          gain.gain.setValueAtTime(0.25, now + i * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.12);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.14);
+        });
+      }
+      playCapture() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.38);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.38);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+      playGoal() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [523.25, 659.25, 783.99, 1046.50];
+        freqs.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + i * 0.07);
+          gain.gain.setValueAtTime(0.3, now + i * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.55);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.07);
+          osc.stop(now + i * 0.07 + 0.6);
+        });
+      }
+      playSafeStar() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Magical glittering star chime progression (C6, E6, G6, B6, C7)
+        const starNotes = [1046.50, 1318.51, 1567.98, 1975.53, 2093.00];
+        starNotes.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, now + i * 0.05);
+          gain.gain.setValueAtTime(0.25, now + i * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.005, now + i * 0.05 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.05);
+          osc.stop(now + i * 0.05 + 0.4);
+        });
+      }
+      playVictory() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+        const times = [0, 0.15, 0.3, 0.45, 0.7, 0.95];
+        const durations = [0.14, 0.14, 0.14, 0.22, 0.18, 0.75];
+        notes.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + times[i]);
+          gain.gain.setValueAtTime(0.35, now + times[i]);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + times[i] + durations[i]);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + times[i]);
+          osc.stop(now + times[i] + durations[i] + 0.05);
+        });
+      }
+    }
+    const audio = new SoundController();
+
+    // --- BOARD COORDINATES & RULES CONSTANTS ---
+    const BOARD_SIZE = 15;
+    const STATE_BASE = -1;
+    const STATE_GOAL = 56;
+
+    const MAIN_TRACK = [
+      [6, 1], [6, 2], [6, 3], [6, 4], [6, 5],
+      [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6],
+      [0, 7], [0, 8],
+      [1, 8], [2, 8], [3, 8], [4, 8], [5, 8],
+      [6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14],
+      [7, 14], [8, 14],
+      [8, 13], [8, 12], [8, 11], [8, 10], [8, 9],
+      [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8],
+      [14, 7], [14, 6],
+      [13, 6], [12, 6], [11, 6], [10, 6], [9, 6],
+      [8, 5], [8, 4], [8, 3], [8, 2], [8, 1], [8, 0],
+      [7, 0], [6, 0]
+    ];
+    const SAFE_SQUARES = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+
+    const COLORS = {
+      red: {
+        name: 'Red',
+        hex: '#ff4757',
+        startIndex: 0,
+        homeTrack: [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6]],
+        basePositions: [[2, 2], [2, 3], [3, 2], [3, 3]]
+      },
+      green: {
+        name: 'Green',
+        hex: '#2ed573',
+        startIndex: 13,
+        homeTrack: [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7]],
+        basePositions: [[2, 11], [2, 12], [3, 11], [3, 12]]
+      },
+      yellow: {
+        name: 'Yellow',
+        hex: '#ffa502',
+        startIndex: 26,
+        homeTrack: [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9], [7, 8]],
+        basePositions: [[11, 11], [11, 12], [12, 11], [12, 12]]
+      },
+      blue: {
+        name: 'Blue',
+        hex: '#1e90ff',
+        startIndex: 39,
+        homeTrack: [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [8, 7]],
+        basePositions: [[11, 2], [11, 3], [12, 2], [12, 3]]
+      }
+    };
+    const COLOR_ORDER = ['red', 'green', 'yellow', 'blue'];
+
+    function getTokenCoordinates(color, pos, tokenIndex = 0) {
+      const cfg = COLORS[color];
+      if (pos === STATE_BASE) return cfg.basePositions[tokenIndex];
+      if (pos >= STATE_GOAL) return cfg.homeTrack[5];
+      if (pos >= 51) return cfg.homeTrack[Math.min(pos - 51, 5)];
+      const trackIdx = (cfg.startIndex + pos) % 52;
+      return MAIN_TRACK[trackIdx];
+    }
+
+    function getAbsoluteTrackIndex(color, pos) {
+      if (pos < 0 || pos >= 51) return -1;
+      return (COLORS[color].startIndex + pos) % 52;
+    }
+
+    // --- MAIN REACT APPLICATION ---
+    function LudoApp() {
+      // Game configuration
+      const [playerCount, setPlayerCount] = useState(2); // Default to 2 players
+      const [showSetupModal, setShowSetupModal] = useState(true);
+      const [showConfirmModal, setShowConfirmModal] = useState(false);
+      const [muted, setMuted] = useState(false);
+
+      // Turn state
+      const [activeColors, setActiveColors] = useState(['red', 'green', 'yellow', 'blue']);
+      const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+      const [currentRoll, setCurrentRoll] = useState(null);
+      const [waitingForRoll, setWaitingForRoll] = useState(true);
+      const [isRolling, setIsRolling] = useState(false);
+      const [validMoves, setValidMoves] = useState([]);
+
+      // Tokens state: { red: [-1, -1, -1, -1], ... }
+      const [tokensState, setTokensState] = useState({
+        red: [-1, -1, -1, -1],
+        green: [-1, -1, -1, -1],
+        yellow: [-1, -1, -1, -1],
+        blue: [-1, -1, -1, -1]
+      });
+      const [winners, setWinners] = useState([]);
+      const [isGameOver, setIsGameOver] = useState(false);
+
+      const currentColor = activeColors[currentTurnIndex] || 'red';
+
+      // Helper: check if an existing game is currently underway
+      const isGameInProgress = () => {
+        return !isGameOver && !showSetupModal;
+      };
+
+      const handleNewGameRequest = () => {
+        audio.playButton();
+        if (isGameInProgress()) {
+          setShowConfirmModal(true);
+        } else {
+          setShowSetupModal(true);
+        }
+      };
+
+      // Start New Game
+      const startNewGame = (count) => {
+        audio.playBaseExit();
+        let colors;
+        if (count === 2) {
+          colors = ['blue', 'green']; // Diagonally opposite sides (Blue vs Green)
+        } else if (count === 3) {
+          colors = ['red', 'green', 'yellow'];
+        } else {
+          colors = ['red', 'green', 'yellow', 'blue'];
+        }
+        setActiveColors(colors);
+        setCurrentTurnIndex(0);
+        setCurrentRoll(null);
+        setWaitingForRoll(true);
+        setValidMoves([]);
+        setWinners([]);
+        setIsGameOver(false);
+        setTokensState({
+          red: [-1, -1, -1, -1],
+          green: [-1, -1, -1, -1],
+          yellow: [-1, -1, -1, -1],
+          blue: [-1, -1, -1, -1]
+        });
+        setShowSetupModal(false);
+      };
+
+      // Check which tokens can legally move
+      const calculateValidMoves = (color, roll, currentTokens) => {
+        const pTokens = currentTokens[color];
+        const valid = [];
+        pTokens.forEach((pos, idx) => {
+          if (pos === STATE_GOAL) return;
+          if (pos === STATE_BASE) {
+            if (roll === 6) valid.push(idx);
+          } else {
+            const nextPos = pos + roll;
+            if (nextPos <= STATE_GOAL) {
+              valid.push(idx);
+            }
+          }
+        });
+        return valid;
+      };
+
+      // Handle Dice Roll
+      const handleRollDice = () => {
+        if (!waitingForRoll || isRolling || isGameOver) return;
+        audio.playDiceRoll();
+        setIsRolling(true);
+
+        setTimeout(() => {
+          const roll = Math.floor(Math.random() * 6) + 1;
+          setCurrentRoll(roll);
+          setIsRolling(false);
+          setWaitingForRoll(false);
+
+          const moves = calculateValidMoves(currentColor, roll, tokensState);
+          setValidMoves(moves);
+
+          // If no valid moves available, automatically skip turn after 850ms
+          if (moves.length === 0) {
+            setTimeout(() => {
+              advanceTurn(false);
+            }, 850);
+          }
+        }, 380);
+      };
+
+      // Handle Token Move with Hop-by-Hop Sound & Animation
+      const handleTokenClick = (color, tokenIndex) => {
+        if (waitingForRoll || color !== currentColor || isGameOver) return;
+        if (!validMoves.includes(tokenIndex)) return;
+
+        const pTokens = [...tokensState[color]];
+        const fromPos = pTokens[tokenIndex];
+        const toPos = fromPos === STATE_BASE ? 0 : fromPos + currentRoll;
+
+        setValidMoves([]); // Disable further clicks during move
+
+        if (fromPos === STATE_BASE) {
+          audio.playBaseExit();
+          pTokens[tokenIndex] = 0;
+          setTokensState({ ...tokensState, [color]: pTokens });
+          setTimeout(() => {
+            finishMoveLogic(color, tokenIndex, 0, currentRoll === 6);
+          }, 350);
+          return;
+        }
+
+        // Animate hop by hop with sound on every square
+        let currPos = fromPos;
+        const hopInterval = setInterval(() => {
+          currPos++;
+          audio.playStep();
+          setTokensState(prevState => {
+            const nextTokens = [...prevState[color]];
+            nextTokens[tokenIndex] = currPos;
+            return { ...prevState, [color]: nextTokens };
+          });
+
+          if (currPos >= toPos) {
+            clearInterval(hopInterval);
+            setTimeout(() => {
+              finishMoveLogic(color, tokenIndex, toPos, currentRoll === 6);
+            }, 250);
+          }
+        }, 140);
+      };
+
+      const finishMoveLogic = (color, tokenIndex, finalPos, wasSix) => {
+        let bonusTurn = wasSix;
+        let capturedAny = false;
+        const pTokens = [...tokensState[color]];
+        pTokens[tokenIndex] = finalPos;
+        let nextTokensState = { ...tokensState, [color]: pTokens };
+
+        if (finalPos === STATE_GOAL) {
+          bonusTurn = true;
+          audio.playGoal();
+          const allHome = pTokens.every(p => p === STATE_GOAL);
+          if (allHome && !winners.some(w => w.color === color)) {
+            audio.playVictory();
+            const rank = winners.length + 1;
+            const newWinners = [...winners, { color, name: COLORS[color].name, rank }];
+            setWinners(newWinners);
+            if (newWinners.length >= activeColors.length - 1) {
+              setIsGameOver(true);
+            }
+          }
+        } else if (finalPos < 51) {
+          const targetAbsIdx = getAbsoluteTrackIndex(color, finalPos);
+          if (!SAFE_SQUARES.has(targetAbsIdx)) {
+            COLOR_ORDER.forEach(oppCol => {
+              if (oppCol === color || !activeColors.includes(oppCol)) return;
+              const oppTokens = [...nextTokensState[oppCol]];
+              let capturedThisOpp = false;
+              oppTokens.forEach((oppPos, oppIdx) => {
+                if (oppPos >= 0 && oppPos < 51) {
+                  if (getAbsoluteTrackIndex(oppCol, oppPos) === targetAbsIdx) {
+                    oppTokens[oppIdx] = STATE_BASE;
+                    capturedThisOpp = true;
+                    capturedAny = true;
+                  }
+                }
+              });
+              if (capturedThisOpp) {
+                nextTokensState[oppCol] = oppTokens;
+              }
+            });
+            if (capturedAny) {
+              bonusTurn = true;
+              audio.playCapture();
+            }
+          } else {
+            audio.playSafeStar();
+          }
+        }
+
+        setTokensState(nextTokensState);
+        setTimeout(() => {
+          advanceTurn(bonusTurn);
+        }, 300);
+      };
+
+      const advanceTurn = (extraTurn = false) => {
+        setWaitingForRoll(true);
+        setCurrentRoll(null);
+        setValidMoves([]);
+
+        if (!extraTurn) {
+          setCurrentTurnIndex(prev => {
+            let nextIdx = (prev + 1) % activeColors.length;
+            let attempts = 0;
+            while (attempts < activeColors.length) {
+              const col = activeColors[nextIdx];
+              if (!winners.some(w => w.color === col)) break;
+              nextIdx = (nextIdx + 1) % activeColors.length;
+              attempts++;
+            }
+            return nextIdx;
+          });
+        }
+      };
+
+      const handleToggleSound = () => {
+        const isMuted = audio.toggleMute();
+        setMuted(isMuted);
+      };
+
+      // Auto-move if there is only 1 valid token to move after rolling
+      useEffect(() => {
+        if (!waitingForRoll && !isGameOver && validMoves.length === 1) {
+          const autoTimer = setTimeout(() => {
+            handleTokenClick(currentColor, validMoves[0]);
+          }, 450);
+          return () => clearTimeout(autoTimer);
+        }
+      }, [validMoves, waitingForRoll, isGameOver, currentColor]);
+
+      // Confetti canvas effect on Game Over
+      useEffect(() => {
+        const canvas = document.getElementById('confetti-canvas');
+        if (!canvas || !isGameOver) {
+          if (canvas) canvas.style.display = 'none';
+          return;
+        }
+        canvas.style.display = 'block';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const particles = [];
+        const palette = ['#ff4757', '#2ed573', '#ffa502', '#1e90ff', '#ffd700', '#ffffff'];
+        for (let i = 0; i < 150; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * -canvas.height,
+            r: Math.random() * 8 + 4,
+            color: palette[Math.floor(Math.random() * palette.length)],
+            speedY: Math.random() * 4 + 2,
+            tilt: Math.random() * 10 - 5
+          });
+        }
+        let animId;
+        const loop = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          particles.forEach(p => {
+            ctx.beginPath();
+            ctx.lineWidth = p.r;
+            ctx.strokeStyle = p.color;
+            ctx.moveTo(p.x + p.tilt, p.y);
+            ctx.lineTo(p.x, p.y + p.tilt + p.r / 2);
+            ctx.stroke();
+            p.y += p.speedY;
+            if (p.y > canvas.height) p.y = -20;
+          });
+          animId = requestAnimationFrame(loop);
+        };
+        loop();
+        return () => cancelAnimationFrame(animId);
+      }, [isGameOver]);
+
+      return (
+        <div className="app-container">
+          {/* HEADER */}
+          <header className="app-header">
+            <div className="logo-container">
+              <img src="./assets/logo.jpg" alt="Dixit Ludo Logo" className="logo-img" />
+              <span className="logo-text">DIXIT LUDO</span>
+            </div>
+            <div className="header-actions">
+              <button className="btn-glass" onClick={handleToggleSound} title="Toggle Sound">
+                {muted ? '🔇' : '🔊'}
+              </button>
+              <button className="btn-glass btn-primary" onClick={handleNewGameRequest}>
+                🎮 New Game
+              </button>
+            </div>
+          </header>
+
+          {/* MAIN WORKSPACE */}
+          <main className="app-main">
+            {/* BOARD */}
+            <div className="board-wrapper">
+              <LudoBoard
+                tokensState={tokensState}
+                activeColors={activeColors}
+                currentColor={currentColor}
+                validMoves={validMoves}
+                waitingForRoll={waitingForRoll}
+                currentRoll={currentRoll}
+                onRollDice={handleRollDice}
+                onTokenClick={handleTokenClick}
+              />
+            </div>
+          </main>
+
+          {/* CONFIRM NEW GAME MODAL */}
+          {showConfirmModal && (
+            <div className="modal-overlay active">
+               <div className="modal-container">
+                 <div style={{ fontSize: '3rem', marginBottom: '0.4rem' }}>⚠️</div>
+                 <h2 className="modal-title">Game in Progress</h2>
+                 <p className="modal-subtitle">An existing game is currently underway. Do you want to start a new game?</p>
+                 <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', width: '100%' }}>
+                   <button
+                     className="btn-glass"
+                     style={{ flex: 1, padding: '0.85rem', fontSize: '1rem', justifyContent: 'center' }}
+                     onClick={() => { audio.playButton(); setShowConfirmModal(false); }}
+                   >
+                     ❌ Resume Game
+                   </button>
+                   <button
+                     className="btn-glass btn-primary"
+                     style={{ flex: 1, padding: '0.85rem', fontSize: '1rem', justifyContent: 'center' }}
+                     onClick={() => {
+                       audio.playButton();
+                       setShowConfirmModal(false);
+                       setShowSetupModal(true);
+                     }}
+                   >
+                     🎮 Start New Game
+                   </button>
+                 </div>
+               </div>
+             </div>
+          )}
+
+          {/* SETUP MODAL (Simple 2, 3, 4 Player Selection) */}
+          {showSetupModal && (
+            <div className="modal-overlay active">
+              <div className="modal-container">
+                <div style={{ fontSize: '3rem', marginBottom: '0.4rem' }}>👑</div>
+                <h2 className="modal-title">Select Players</h2>
+                <p className="modal-subtitle">Choose number of human players to start playing offline</p>
+
+                <div className="player-select-grid">
+                  <div
+                    className={`player-select-card ${playerCount === 2 ? 'active' : ''}`}
+                    onClick={() => { audio.playButton(); setPlayerCount(2); }}
+                  >
+                    <span className="player-select-icon">👥</span>
+                    <span>2 Players</span>
+                    <small style={{ opacity: 0.8, fontSize: '0.75rem' }}>Blue & Green</small>
+                  </div>
+
+                  <div
+                    className={`player-select-card ${playerCount === 3 ? 'active' : ''}`}
+                    onClick={() => { audio.playButton(); setPlayerCount(3); }}
+                  >
+                    <span className="player-select-icon">👤👤👤</span>
+                    <span>3 Players</span>
+                    <small style={{ opacity: 0.8, fontSize: '0.75rem' }}>Red, Green, Yellow</small>
+                  </div>
+
+                  <div
+                    className={`player-select-card ${playerCount === 4 ? 'active' : ''}`}
+                    onClick={() => { audio.playButton(); setPlayerCount(4); }}
+                  >
+                    <span className="player-select-icon">👑👑</span>
+                    <span>4 Players</span>
+                    <small style={{ opacity: 0.8, fontSize: '0.75rem' }}>All 4 Colors</small>
+                  </div>
+                </div>
+
+                <button
+                  className="btn-glass btn-primary"
+                  style={{ width: '100%', padding: '0.85rem', fontSize: '1.1rem', justifyContent: 'center' }}
+                  onClick={() => startNewGame(playerCount)}
+                >
+                  🚀 Start Offline Game
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* VICTORY MODAL */}
+          {isGameOver && (
+            <div className="modal-overlay active">
+              <div className="modal-container">
+                <div style={{ fontSize: '3.8rem', marginBottom: '0.4rem' }}>🏆</div>
+                <h2 className="modal-title">CHAMPION CROWNED!</h2>
+                <p className="modal-subtitle">The Dixit Ludo tournament is complete!</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', margin: '1.25rem 0' }}>
+                  {winners.map(win => (
+                    <div
+                      key={win.color}
+                      style={{
+                        padding: '0.85rem 1rem',
+                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: win.rank === 1 ? '2px solid #ffd700' : '1px solid rgba(255, 255, 255, 0.15)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontWeight: 700
+                      }}
+                    >
+                      <span>{win.rank === 1 ? '🥇' : win.rank === 2 ? '🥈' : '🥉'} #{win.rank}</span>
+                      <span style={{ color: COLORS[win.color].hex }}>{win.name} Player</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  className="btn-glass btn-primary"
+                  style={{ width: '100%', padding: '0.85rem', fontSize: '1.05rem', justifyContent: 'center' }}
+                  onClick={() => setShowSetupModal(true)}
+                >
+                  🔄 Play Again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- LUDO BOARD COMPONENT ---
+    function LudoBoard({ tokensState, activeColors, currentColor, validMoves, waitingForRoll, currentRoll, onRollDice, onTokenClick }) {
+      // 72 track and home-straight cells (excluding the 4 6x6 Yards and 1 3x3 Center Goal)
+      const trackCells = useMemo(() => {
+        const arr = [];
+        for (let r = 0; r < BOARD_SIZE; r++) {
+          for (let c = 0; c < BOARD_SIZE; c++) {
+            const inYardRed = r <= 5 && c <= 5;
+            const inYardGreen = r <= 5 && c >= 9;
+            const inYardYellow = r >= 9 && c >= 9;
+            const inYardBlue = r >= 9 && c <= 5;
+            const inCenter = r >= 6 && r <= 8 && c >= 6 && c <= 8;
+            if (!inYardRed && !inYardGreen && !inYardYellow && !inYardBlue && !inCenter) {
+              arr.push({ r, c });
+            }
+          }
+        }
+        return arr;
+      }, []);
+
+      // Pre-calculate occupancy so stacked tokens get offset cleanly
+      const stackOffsets = useMemo(() => {
+        const occ = {};
+        COLOR_ORDER.forEach(color => {
+          if (!activeColors.includes(color)) return;
+          tokensState[color].forEach((pos, idx) => {
+            const coords = getTokenCoordinates(color, pos, idx);
+            const key = `${coords[0]}-${coords[1]}`;
+            if (!occ[key]) occ[key] = [];
+            occ[key].push({ color, idx });
+          });
+        });
+        return occ;
+      }, [tokensState, activeColors]);
+
+      const renderCellContent = (r, c) => {
+        // Star squares
+        const starCoords = ['2-6', '6-12', '12-8', '8-2', '6-1', '1-8', '8-13', '13-6'];
+        const isStar = starCoords.includes(`${r}-${c}`);
+
+        // Arrows
+        let arrow = null;
+        if (r === 7 && c === 0) arrow = <span className="arrow-icon arrow-right">➔</span>;
+        if (r === 0 && c === 7) arrow = <span className="arrow-icon arrow-down">➔</span>;
+        if (r === 7 && c === 14) arrow = <span className="arrow-icon arrow-left">➔</span>;
+        if (r === 14 && c === 7) arrow = <span className="arrow-icon arrow-up">➔</span>;
+
+        return (
+          <>
+            {isStar && <span className="star-icon">★</span>}
+            {arrow}
+          </>
+        );
+      };
+
+      const getCellClassName = (r, c) => {
+        let cls = 'board-cell';
+        // Start Squares
+        if (r === 6 && c === 1) return `${cls} cell-start start-red`;
+        if (r === 1 && c === 8) return `${cls} cell-start start-green`;
+        if (r === 8 && c === 13) return `${cls} cell-start start-yellow`;
+        if (r === 13 && c === 6) return `${cls} cell-start start-blue`;
+
+        // Home straight lanes
+        if (r === 7 && c >= 1 && c <= 5) return `${cls} cell-home-straight hs-red`;
+        if (c === 7 && r >= 1 && r <= 5) return `${cls} cell-home-straight hs-green`;
+        if (r === 7 && c >= 9 && c <= 13) return `${cls} cell-home-straight hs-yellow`;
+        if (c === 7 && r >= 9 && r <= 13) return `${cls} cell-home-straight hs-blue`;
+
+        // Star squares
+        if (['2-6', '6-12', '12-8', '8-2'].includes(`${r}-${c}`)) return `${cls} cell-star`;
+
+        return cls;
+      };
+
+      return (
+        <div id="board-grid">
+          {/* 4 Colored Base Yards (CSS Grid Spanning - Zero Overlap) */}
+          <YardBox
+            color="red"
+            isActive={activeColors.includes('red')}
+            isCurrentTurn={currentColor === 'red'}
+            waitingForRoll={waitingForRoll}
+            currentRoll={currentRoll}
+            onRollDice={onRollDice}
+          />
+          <YardBox
+            color="green"
+            isActive={activeColors.includes('green')}
+            isCurrentTurn={currentColor === 'green'}
+            waitingForRoll={waitingForRoll}
+            currentRoll={currentRoll}
+            onRollDice={onRollDice}
+          />
+          <YardBox
+            color="yellow"
+            isActive={activeColors.includes('yellow')}
+            isCurrentTurn={currentColor === 'yellow'}
+            waitingForRoll={waitingForRoll}
+            currentRoll={currentRoll}
+            onRollDice={onRollDice}
+          />
+          <YardBox
+            color="blue"
+            isActive={activeColors.includes('blue')}
+            isCurrentTurn={currentColor === 'blue'}
+            waitingForRoll={waitingForRoll}
+            currentRoll={currentRoll}
+            onRollDice={onRollDice}
+          />
+
+          {/* 72 Track and Home-Straight Squares */}
+          {trackCells.map(({ r, c }) => (
+            <div
+              key={`${r}-${c}`}
+              className={getCellClassName(r, c)}
+              style={{ gridRow: r + 1, gridColumn: c + 1 }}
+            >
+              {renderCellContent(r, c)}
+            </div>
+          ))}
+
+          {/* Center Royal Crown Goal */}
+          <div className="center-home-container">
+            <div className="home-triangle triangle-red"></div>
+            <div className="home-triangle triangle-green"></div>
+            <div className="home-triangle triangle-yellow"></div>
+            <div className="home-triangle triangle-blue"></div>
+            <div className="center-crown">👑</div>
+          </div>
+
+          {/* Render all tokens */}
+          {COLOR_ORDER.map(color => {
+            if (!activeColors.includes(color)) return null;
+            return tokensState[color].map((pos, idx) => {
+              const isValidMove = (color === currentColor) && validMoves.includes(idx);
+              const coords = getTokenCoordinates(color, pos, idx);
+              const key = `${coords[0]}-${coords[1]}`;
+              const stackList = stackOffsets[key] || [];
+              const stackIdx = stackList.findIndex(item => item.color === color && item.idx === idx);
+              const totalStacked = stackList.length;
+
+              // Calculate XY offset for stacking
+              let offsetX = 0, offsetY = 0;
+              const isBase = pos === STATE_BASE;
+              if (!isBase && totalStacked > 1) {
+                const dist = 7;
+                if (totalStacked === 2) {
+                  offsetX = stackIdx === 0 ? -dist : dist;
+                  offsetY = stackIdx === 0 ? -dist : dist;
+                } else if (totalStacked === 3) {
+                  const rad = (stackIdx * 120 * Math.PI) / 180;
+                  offsetX = Math.cos(rad) * dist * 1.2;
+                  offsetY = Math.sin(rad) * dist * 1.2;
+                } else {
+                  offsetX = (stackIdx % 2 === 0 ? -1 : 1) * dist;
+                  offsetY = (Math.floor(stackIdx / 2) === 0 ? -1 : 1) * dist;
+                }
+              }
+
+              // Left/Top percentage on 15x15 grid
+              const leftPct = ((coords[1] + 0.5) / BOARD_SIZE) * 100;
+              const topPct = ((coords[0] + 0.5) / BOARD_SIZE) * 100;
+
+              return (
+                <div
+                  key={`${color}-${idx}`}
+                  className={`token token-${color} ${isValidMove ? 'token-valid-move' : ''}`}
+                  style={{
+                    left: `${leftPct}%`,
+                    top: `${topPct}%`,
+                    transform: `translate(${offsetX}px, ${offsetY}px) ${pos === STATE_GOAL ? 'scale(0.8)' : 'scale(1)'}`
+                  }}
+                  onClick={() => onTokenClick(color, idx)}
+                >
+                  <div className="token-inner">
+                    <span className="token-number">{idx + 1}</span>
+                  </div>
+                </div>
+              );
+            });
+          })}
+        </div>
+      );
+    }
+
+    // --- REAL CSS 3x3 DICE FACE COMPONENT ---
+    function DiceFace({ num = 1 }) {
+      const pipPatterns = {
+        1: [4],
+        2: [2, 6],
+        3: [2, 4, 6],
+        4: [0, 2, 6, 8],
+        5: [0, 2, 4, 6, 8],
+        6: [0, 2, 3, 5, 6, 8]
+      };
+      const activePips = pipPatterns[num] || [4];
+
+      return (
+        <div className="css-dice-face">
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div
+              key={i}
+              className={`dice-pip ${activePips.includes(i) ? 'pip-active' : ''}`}
+            ></div>
+          ))}
+        </div>
+      );
+    }
+
+    // --- YARD BOX COMPONENT ---
+    function YardBox({ color, isActive = true, isCurrentTurn = false, waitingForRoll = false, currentRoll = null, onRollDice }) {
+      const handleDiceClick = (e) => {
+        e.stopPropagation();
+        if (isActive && isCurrentTurn && waitingForRoll) {
+          onRollDice();
+        }
+      };
+
+      return (
+        <div
+          className={`yard-container yard-box-${color} ${isCurrentTurn && isActive ? 'yard-current-turn' : ''}`}
+          style={{
+            opacity: isActive ? 1 : 0.22,
+            filter: isActive ? 'none' : 'grayscale(85%) brightness(0.6)',
+            transition: 'all 0.3s ease',
+            pointerEvents: isActive ? 'auto' : 'none'
+          }}
+        >
+          <div className="yard-circles">
+            <div className="yard-circle"></div>
+            <div className="yard-circle"></div>
+            <div className="yard-circle"></div>
+            <div className="yard-circle"></div>
+          </div>
+
+          {/* OUTER CORNER DICE BOX */}
+          {isActive && (
+            <div
+              className={`outer-dice-box outer-corner-${color} ${isCurrentTurn ? 'box-active-turn' : ''}`}
+              onClick={handleDiceClick}
+              title={isCurrentTurn ? "Tap Dice to Roll" : `${COLORS[color].name}'s Outer Corner`}
+            >
+              {isCurrentTurn ? (
+                waitingForRoll ? (
+                  <div className="corner-dice dice-waiting" title="Tap to Roll Dice">
+                    <span className="dice-bounce-icon">🎲</span>
+                  </div>
+                ) : (
+                  <div className={`corner-dice dice-rolled ${currentRoll === 6 ? 'dice-six-glow' : ''}`}>
+                    <DiceFace num={currentRoll || 1} />
+                  </div>
+                )
+              ) : (
+                <div className="dice-empty-slot"></div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Render React App
+    const rootEl = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootEl);
+    root.render(<LudoApp />);
+  </script>
+</body>
+</html>
