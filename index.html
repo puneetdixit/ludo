@@ -288,6 +288,7 @@
       });
       const [winners, setWinners] = useState([]);
       const [isGameOver, setIsGameOver] = useState(false);
+      const [consecutiveSixes, setConsecutiveSixes] = useState(0);
 
       const currentColor = activeColors[currentTurnIndex] || 'red';
 
@@ -322,6 +323,7 @@
         setValidMoves([]);
         setWinners([]);
         setIsGameOver(false);
+        setConsecutiveSixes(0);
         setTokensState({
           red: [-1, -1, -1, -1],
           green: [-1, -1, -1, -1],
@@ -359,6 +361,21 @@
           const roll = Math.floor(Math.random() * 6) + 1;
           setCurrentRoll(roll);
           setIsRolling(false);
+
+          let nextSixes = roll === 6 ? consecutiveSixes + 1 : 0;
+          setConsecutiveSixes(nextSixes);
+
+          if (nextSixes >= 3) {
+            // Three 6s in a row! Turn forfeited.
+            setWaitingForRoll(false);
+            setValidMoves([]);
+            setConsecutiveSixes(0); // Reset for next player
+            setTimeout(() => {
+              advanceTurn(false);
+            }, 600); // Give player 600ms to see they rolled a 3rd 6
+            return;
+          }
+
           setWaitingForRoll(false);
 
           const moves = calculateValidMoves(currentColor, roll, tokensState);
@@ -475,6 +492,7 @@
         setValidMoves([]);
 
         if (!extraTurn) {
+          setConsecutiveSixes(0);
           setCurrentTurnIndex(prev => {
             let nextIdx = (prev + 1) % activeColors.length;
             let attempts = 0;
