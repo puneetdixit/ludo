@@ -196,8 +196,15 @@
     }
     const audio = new SoundController();
 
-    // --- BOARD COORDINATES & RULES CONSTANTS ---
     const BOARD_SIZE = 15;
+    // Calibrated 15x15 grid column/row weights: base cells (0..5 & 9..14) are compact 0.78fr, track cells (6..8) are 1.44fr (85% larger!)
+    const COL_WEIGHTS = [0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 1.44, 1.44, 1.44, 0.78, 0.78, 0.78, 0.78, 0.78, 0.78];
+    const TOTAL_WEIGHT = COL_WEIGHTS.reduce((a, b) => a + b, 0);
+    const GRID_CENTERS = COL_WEIGHTS.map((w, idx) => {
+      let prior = 0;
+      for (let i = 0; i < idx; i++) prior += COL_WEIGHTS[i];
+      return ((prior + w / 2) / TOTAL_WEIGHT) * 100;
+    });
     const STATE_BASE = -1;
     const STATE_GOAL = 56;
 
@@ -365,13 +372,13 @@
           const moves = calculateValidMoves(currentColor, roll, tokensState);
           setValidMoves(moves);
 
-          // If no valid moves available, automatically skip turn after 850ms
+          // If no valid moves available, automatically skip turn after 220ms
           if (moves.length === 0) {
             setTimeout(() => {
               advanceTurn(false);
-            }, 850);
+            }, 220);
           }
-        }, 380);
+        }, 75);
       };
 
       // Handle Token Move with Hop-by-Hop Sound & Animation
@@ -391,7 +398,7 @@
           setTokensState({ ...tokensState, [color]: pTokens });
           setTimeout(() => {
             finishMoveLogic(color, tokenIndex, 0, currentRoll === 6);
-          }, 350);
+          }, 110);
           return;
         }
 
@@ -410,9 +417,9 @@
             clearInterval(hopInterval);
             setTimeout(() => {
               finishMoveLogic(color, tokenIndex, toPos, currentRoll === 6);
-            }, 250);
+            }, 60);
           }
-        }, 140);
+        }, 85);
       };
 
       const finishMoveLogic = (color, tokenIndex, finalPos, wasSix) => {
@@ -467,7 +474,7 @@
         setTokensState(nextTokensState);
         setTimeout(() => {
           advanceTurn(bonusTurn);
-        }, 300);
+        }, 60);
       };
 
       const advanceTurn = (extraTurn = false) => {
@@ -500,7 +507,7 @@
         if (!waitingForRoll && !isGameOver && validMoves.length === 1) {
           const autoTimer = setTimeout(() => {
             handleTokenClick(currentColor, validMoves[0]);
-          }, 450);
+          }, 120);
           return () => clearTimeout(autoTimer);
         }
       }, [validMoves, waitingForRoll, isGameOver, currentColor]);
@@ -863,9 +870,9 @@
                 }
               }
 
-              // Left/Top percentage on 15x15 grid
-              const leftPct = ((coords[1] + 0.5) / BOARD_SIZE) * 100;
-              const topPct = ((coords[0] + 0.5) / BOARD_SIZE) * 100;
+              // Left/Top percentage on calibrated 15x15 grid
+              const leftPct = GRID_CENTERS[coords[1]];
+              const topPct = GRID_CENTERS[coords[0]];
 
               return (
                 <div

@@ -4,16 +4,27 @@
 
 ---
 
-## 📱 Minimal Centered Phone Layout & Pure Corner Dice Rolling
+## 📱 Minimal Centered Phone Layout & Expanded Path Track
 - **Dead-Center Phone Screen Alignment**: On mobile phone screens (`@media (max-width: 600px)`), the entire game workspace (`.app-main`) uses `justify-content: center` and `min-height: calc(100vh - 54px)`, positioning **the Ludo board (`.board-wrapper`) 100% perfectly in the center of the phone screen**!
-- **Maximized Board Size & Pure Base Yards (No Color Text Clutter)**:
-  - By removing the bottom info/controller box entirely, the board size expands to **min(96vw, 82vh, 560px)**, giving you the largest possible game board on mobile phones without scrolling.
-  - The color name text labels ("RED", "GREEN", "YELLOW", "BLUE") inside each colored base yard have been **removed**, leaving clean, vibrant casino-style base yards with only the token circles and the outer corner dice box!
+- **Maximized Path Size vs. Compact Colour Boxes (`0.78fr` vs `1.44fr`)**:
+  - The 15×15 CSS Grid uses weighted columns and rows (`repeat(6, 0.78fr) repeat(3, 1.44fr) repeat(6, 0.78fr)`).
+  - This makes the 4 corner colour boxes (**Red, Green, Yellow, Blue base yards**) compact and sleek, while making every square on the **path track and home goal 85% larger**!
+  - Tokens and base circles have also been enlarged (`1.18x`) so tokens, stars, and safe squares are huge, vibrant, and effortless to tap on phones.
 - **Pure Corner-Dice Rolling (No Bottom UI Box)**:
   - The bottom controller box has been **completely removed** for a sleek, minimal, distraction-free interface.
   - All gameplay happens directly on the board:
     - Tap the pulsing dice inside the active player's **Outer Corner Dice Box** to roll.
     - Tap any glowing token on the board to move!
+
+---
+
+## ⚡ Instant Dice Rolling & Ultra-Snappy Turn Shifting
+- **Instant Dice Display (`75ms`)**: When you tap the pulsing dice, the rolled number appears **immediately in 75ms** (reduced from 380ms!), giving instant tactile feedback!
+- **Zero-Lag Turn Shifting (`60ms - 220ms`)**:
+  - When a token finishes moving or enters a base/goal, the turn immediately shifts to the next player in **60ms** (reduced from 300ms!).
+  - If you roll and have **zero valid moves**, the turn automatically skips in **220ms** (reduced from 850ms!).
+  - If you roll and have **only 1 valid move**, that token automatically starts moving in **120ms** (reduced from 450ms!).
+  - Hop-by-hop step animations run at **85ms per square** for a crisp, high-tempo game flow.
 
 ---
 
@@ -47,12 +58,6 @@
 
 ---
 
-## ⚡ Intelligent Auto-Move
-- **Automatic Move on Single Option**: When you roll the dice and **only 1 legal move is available**, the game automatically selects and animates that token after a brief `450ms` delay! You never have to manually tap a token when there is zero ambiguity.
-- **Automatic Turn Skip**: When you roll and have **zero valid moves**, the turn automatically passes to the next player after `850ms`.
-
----
-
 ## ✨ Zero-Overlap CSS Grid Layout
 
 - **Explicit 15x15 CSS Grid System**: Every square on the board is explicitly locked to its exact row and column coordinate (`gridRow`, `gridColumn`).
@@ -75,14 +80,10 @@ All sounds are synthesized natively using the **HTML5 Web Audio API** with zero 
 
 ---
 
-## 🚀 How to Deploy to AWS S3 for Mobile Browser Play
+## 🚀 How to Deploy to AWS S3 / GitHub Pages for Mobile Play
 
-1. In your AWS S3 bucket, upload the following files/folders:
-   - `index.html`
-   - `style.css`
-   - `assets/` (containing `logo.jpg`)
-2. In your S3 bucket settings, enable **Static website hosting** and set the index document to `index.html`.
-3. Open the S3 website URL on your phone browser (Safari/Chrome). Once loaded, you can play offline!
+- **GitHub Pages**: Deployed live on **https://puneetdixit.github.io/ludo/**
+- **AWS S3**: Simply upload `index.html`, `style.css`, and `assets/` to any static hosting S3 bucket!
 
 *Note: You can also double-click `index.html` in Finder on your Mac to test it instantly without any local web server.*
 

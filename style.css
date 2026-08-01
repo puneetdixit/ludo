@@ -166,8 +166,8 @@ body {
   width: var(--board-max-size);
   height: var(--board-max-size);
   display: grid;
-  grid-template-columns: repeat(15, 1fr);
-  grid-template-rows: repeat(15, 1fr);
+  grid-template-columns: repeat(6, 0.78fr) repeat(3, 1.44fr) repeat(6, 0.78fr);
+  grid-template-rows: repeat(6, 0.78fr) repeat(3, 1.44fr) repeat(6, 0.78fr);
   background: #141829;
   border-radius: 16px;
   overflow: hidden;
@@ -280,8 +280,8 @@ body {
 }
 
 .yard-circle {
-  width: calc(var(--cell-size) * 0.86);
-  height: calc(var(--cell-size) * 0.86);
+  width: calc(var(--cell-size) * 1.05);
+  height: calc(var(--cell-size) * 1.05);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.35);
   border: 1.5px dashed rgba(255, 255, 255, 0.3);
@@ -503,10 +503,10 @@ body {
 /* TOKENS */
 .token {
   position: absolute;
-  width: calc(var(--cell-size) * 0.84);
-  height: calc(var(--cell-size) * 0.84);
-  margin-left: calc(var(--cell-size) * -0.42);
-  margin-top: calc(var(--cell-size) * -0.42);
+  width: calc(var(--cell-size) * 1.18);
+  height: calc(var(--cell-size) * 1.18);
+  margin-left: calc(var(--cell-size) * -0.59);
+  margin-top: calc(var(--cell-size) * -0.59);
   border-radius: 50%;
   z-index: 20;
   cursor: pointer;
