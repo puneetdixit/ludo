@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -291,7 +291,6 @@
 
       const currentColor = activeColors[currentTurnIndex] || 'red';
 
-      // Helper: check if an existing game is currently underway
       const isGameInProgress = () => {
         return !isGameOver && !showSetupModal;
       };
@@ -620,6 +619,11 @@
                 onRollDice={handleRollDice}
                 onTokenClick={handleTokenClick}
               />
+              {/* FLOATING CORNER DICE BUTTONS OUTSIDE THE BOARD */}
+              <FloatingDice color="red" activeColors={activeColors} currentColor={currentColor} currentRoll={currentRoll} waitingForRoll={waitingForRoll} onRollDice={handleRollDice} />
+              <FloatingDice color="green" activeColors={activeColors} currentColor={currentColor} currentRoll={currentRoll} waitingForRoll={waitingForRoll} onRollDice={handleRollDice} />
+              <FloatingDice color="yellow" activeColors={activeColors} currentColor={currentColor} currentRoll={currentRoll} waitingForRoll={waitingForRoll} onRollDice={handleRollDice} />
+              <FloatingDice color="blue" activeColors={activeColors} currentColor={currentColor} currentRoll={currentRoll} waitingForRoll={waitingForRoll} onRollDice={handleRollDice} />
             </div>
           </main>
 
@@ -922,7 +926,7 @@
                   style={{
                     left: `${leftPct}%`,
                     top: `${topPct}%`,
-                    transform: `translate(${offsetX}px, ${offsetY}px) ${pos === STATE_GOAL ? 'scale(0.8)' : 'scale(1)'}`
+                    transform: `translate(${offsetX}px, ${offsetY}px) rotate(-45deg) ${pos === STATE_GOAL ? 'scale(0.8)' : 'scale(1)'}`
                   }}
                   onClick={() => onTokenClick(color, idx)}
                 >
@@ -961,15 +965,41 @@
       );
     }
 
-    // --- YARD BOX COMPONENT ---
-    function YardBox({ color, isActive = true, isCurrentTurn = false, waitingForRoll = false, currentRoll = null, onRollDice }) {
-      const handleDiceClick = (e) => {
-        e.stopPropagation();
-        if (isActive && isCurrentTurn && waitingForRoll) {
-          onRollDice();
-        }
-      };
+    // --- FLOATING DICE COMPONENT ---
+    function FloatingDice({ color, activeColors, currentColor, currentRoll, waitingForRoll, onRollDice }) {
+      const isActive = activeColors.includes(color);
+      const isCurrentTurn = currentColor === color;
 
+      if (!isActive) return null;
+
+      return (
+        <div
+          className={`floating-dice floating-dice-${color} ${isCurrentTurn ? 'box-active-turn' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isCurrentTurn && waitingForRoll) onRollDice();
+          }}
+          title={isCurrentTurn ? "Tap Dice to Roll" : `${COLORS[color].name}'s Dice`}
+        >
+          {isCurrentTurn ? (
+            waitingForRoll ? (
+              <div className="corner-dice dice-waiting" title="Tap to Roll Dice">
+                <span className="dice-bounce-icon">🎲</span>
+              </div>
+            ) : (
+              <div className={`corner-dice dice-rolled ${currentRoll === 6 ? 'dice-six-glow' : ''}`}>
+                <DiceFace num={currentRoll || 1} />
+              </div>
+            )
+          ) : (
+            <div className="dice-empty-slot"></div>
+          )}
+        </div>
+      );
+    }
+
+    // --- YARD BOX COMPONENT ---
+    function YardBox({ color, isActive = true, isCurrentTurn = false }) {
       return (
         <div
           className={`yard-container yard-box-${color} ${isCurrentTurn && isActive ? 'yard-current-turn' : ''}`}
@@ -987,28 +1017,6 @@
             <div className="yard-circle"></div>
           </div>
 
-          {/* OUTER CORNER DICE BOX */}
-          {isActive && (
-            <div
-              className={`outer-dice-box outer-corner-${color} ${isCurrentTurn ? 'box-active-turn' : ''}`}
-              onClick={handleDiceClick}
-              title={isCurrentTurn ? "Tap Dice to Roll" : `${COLORS[color].name}'s Outer Corner`}
-            >
-              {isCurrentTurn ? (
-                waitingForRoll ? (
-                  <div className="corner-dice dice-waiting" title="Tap to Roll Dice">
-                    <span className="dice-bounce-icon">🎲</span>
-                  </div>
-                ) : (
-                  <div className={`corner-dice dice-rolled ${currentRoll === 6 ? 'dice-six-glow' : ''}`}>
-                    <DiceFace num={currentRoll || 1} />
-                  </div>
-                )
-              ) : (
-                <div className="dice-empty-slot"></div>
-              )}
-            </div>
-          )}
         </div>
       );
     }

@@ -11,11 +11,14 @@
 - **Dead-Center Phone Screen Alignment**: On mobile phone screens (`@media (max-width: 600px)`), the entire game workspace (`.app-main`) uses `justify-content: center` and `min-height: calc(100vh - 54px)`, positioning **the Ludo board (`.board-wrapper`) 100% perfectly in the center of the phone screen**!
 - **Uniform Perfectly Square Grid (`repeat(15, 1fr)`)**:
   - The 15×15 CSS Grid uses equal columns and rows (`repeat(15, 1fr)`) so that every single path square on the board is a **100% identical, mathematically perfect square**.
-- **Pure Corner-Dice Rolling (No Bottom UI Box)**:
-  - The bottom controller box has been **completely removed** for a sleek, minimal, distraction-free interface.
-  - All gameplay happens directly on the board:
-    - Tap the pulsing dice inside the active player's **Outer Corner Dice Box** to roll.
-    - Tap any glowing token on the board to move!
+- **Massive Invisible Touch Targets for Mobile (Accessibility)**:
+  - While tokens look beautifully proportioned on screen (`22px` on phones), tapping something that small is frustrating.
+  - We added a massive invisible `::after` pseudo-element expanding the physical tap area of all glowing (valid) tokens to **250% of their visual size (`~55px`)**! This greatly exceeds Apple's 44px recommendation, making the game incredibly easy and forgiving to play on small mobile phones!
+- **Floating External Dice Boxes**:
+  - The dice rolling boxes have been completely **removed from inside the colored base yards**, giving the tokens plenty of spacious, uncluttered room in their home base!
+  - Instead, the dice boxes now **float completely outside the Ludo board** in the 4 corners of your screen!
+  - **Red** rolls on the Top-Left, **Green** on the Top-Right, **Yellow** on the Bottom-Right, and **Blue** on the Bottom-Left.
+  - Just tap the floating, glowing dice outside your corner of the board to roll!
 
 ---
 

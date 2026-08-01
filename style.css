@@ -15,8 +15,8 @@
   --yellow: #ffa502;
   --blue: #1e90ff;
 
-  /* Board sizing - mobile phone optimized */
-  --board-max-size: min(96vw, 82vh, 560px);
+  /* Board sizing - maximize size on mobile to make squares bigger */
+  --board-max-size: min(100vw, 85vh, 600px);
   --cell-size: calc(var(--board-max-size) / 15);
 }
 
@@ -280,12 +280,12 @@ body {
 }
 
 .yard-circle {
-  width: calc(var(--cell-size) * 0.88);
-  height: calc(var(--cell-size) * 0.88);
+  width: calc(var(--cell-size) * 1.15);
+  height: calc(var(--cell-size) * 1.15);
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1.5px dashed rgba(255, 255, 255, 0.3);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,56 +297,46 @@ body {
   border-color: rgba(255, 255, 255, 0.85);
 }
 
-.outer-dice-box {
+/* FLOATING DICE OUTSIDE BOARD - HUGE FOR EASY TAPPING */
+.floating-dice {
   position: absolute;
-  width: calc(var(--cell-size) * 1.32);
-  height: calc(var(--cell-size) * 1.32);
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 14px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.28);
-  background: rgba(10, 14, 25, 0.45);
+  width: calc(var(--cell-size) * 3);
+  height: calc(var(--cell-size) * 3);
+  min-width: 65px;
+  min-height: 65px;
+  background: rgba(10, 12, 20, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), inset 0 2px 5px rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 12;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  z-index: 40;
+  transition: all 0.3s ease;
 }
 
-/* OUTermost CORNERS FOR EACH YARD BASE */
-.outer-corner-red {
-  top: 7%;
-  left: 7%;
-}
-.outer-corner-green {
-  top: 7%;
-  right: 7%;
-}
-.outer-corner-yellow {
-  bottom: 7%;
-  right: 7%;
-}
-.outer-corner-blue {
-  bottom: 7%;
-  left: 7%;
-}
+/* Position floating dice just above/below the board at the exact corners */
+.floating-dice-red { top: -4.5rem; left: 0; }
+.floating-dice-green { top: -4.5rem; right: 0; }
+.floating-dice-yellow { bottom: -4.5rem; right: 0; }
+.floating-dice-blue { bottom: -4.5rem; left: 0; }
 
-.outer-dice-box.box-active-turn {
+.floating-dice.box-active-turn {
   border: 2px solid #ffd700;
   background: rgba(15, 20, 35, 0.88);
   box-shadow: 0 0 20px rgba(255, 215, 0, 0.75), inset 0 0 12px rgba(255, 215, 0, 0.35);
   cursor: pointer;
 }
 
-.outer-dice-box.box-active-turn:hover {
+.floating-dice.box-active-turn:hover {
   transform: scale(1.08);
   box-shadow: 0 0 26px rgba(255, 215, 0, 1), inset 0 0 16px rgba(255, 215, 0, 0.5);
 }
 
 .dice-empty-slot {
-  width: 100%;
-  height: 100%;
+  width: 75%;
+  height: 75%;
 }
 
 .corner-dice {
@@ -364,7 +354,8 @@ body {
 }
 
 .dice-bounce-icon {
-  font-size: calc(var(--cell-size) * 0.86);
+  font-size: calc(var(--cell-size) * 1.5);
+  font-size: 32px;
   filter: drop-shadow(0 2px 6px rgba(255, 215, 0, 0.8));
 }
 
@@ -500,26 +491,37 @@ body {
   50% { transform: translateY(-3px) scale(1.08); }
 }
 
-/* TOKENS */
+/* TOKENS - Massive 3D Pin Style */
 .token {
   position: absolute;
-  width: calc(var(--cell-size) * 0.88);
-  height: calc(var(--cell-size) * 0.88);
-  margin-left: calc(var(--cell-size) * -0.44);
-  margin-top: calc(var(--cell-size) * -0.44);
-  border-radius: 50%;
+  width: calc(var(--cell-size) * 1.45);
+  height: calc(var(--cell-size) * 1.45);
+  margin-left: calc(var(--cell-size) * -0.725); /* Center horizontally */
+  margin-top: calc(var(--cell-size) * -1.75); /* Shift up so the rotated nib perfectly touches the origin */
+  border-radius: 50% 50% 50% 10%; /* Teardrop / Map Pin Shape */
+  transform: rotate(-45deg); /* Point the sharp edge down */
   z-index: 20;
   cursor: pointer;
-  user-select: none;
+  box-shadow: 2px 6px 12px rgba(0, 0, 0, 0.7), inset -2px -2px 6px rgba(0,0,0,0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   transform-origin: center center;
-  box-shadow: 
-    0 4px 10px rgba(0, 0, 0, 0.65),
-    inset 0 2px 2px rgba(255, 255, 255, 0.55),
-    0 0 0 2.5px rgba(255, 255, 255, 0.85);
   transition: left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.2s ease;
+}
+
+/* MASSIVE INVISIBLE TOUCH TARGET FOR MOBILE - ONLY ON VALID MOVES */
+.token-valid-move::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 250%;
+  height: 250%;
+  border-radius: 50%;
+  z-index: 10;
 }
 
 .token-red {
@@ -544,6 +546,7 @@ body {
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.4);
+  transform: rotate(45deg); /* Counter-rotate so text stands upright */
 }
 
 .token-number {
@@ -563,11 +566,11 @@ body {
 
 @keyframes validTokenPulse {
   0% {
-    transform: scale(1.1);
+    transform: rotate(-45deg) scale(1.1);
     box-shadow: 0 0 15px 4px #ffffff, 0 5px 15px rgba(0,0,0,0.7);
   }
   100% {
-    transform: scale(1.25);
+    transform: rotate(-45deg) scale(1.25);
     box-shadow: 0 0 25px 8px #ffd700, 0 8px 20px rgba(0,0,0,0.8);
   }
 }
@@ -743,4 +746,26 @@ body {
   .player-select-icon {
     font-size: 1.5rem;
   }
+}
+
+/* Small Mobile Adjustments - Maximize Box Sizes */
+@media (max-width: 600px) {
+  .app-main {
+    padding: 0;
+    min-height: calc(100vh - 64px);
+    overflow: hidden;
+  }
+  .board-wrapper {
+    padding: 0;
+    border-radius: 4px;
+    border: none;
+  }
+  :root {
+    --board-max-size: 100vw;
+  }
+  /* Ensure floating dice stay visible even on tight screens */
+  .floating-dice-red { top: -5rem; left: 0.5rem; }
+  .floating-dice-green { top: -5rem; right: 0.5rem; }
+  .floating-dice-yellow { bottom: -5rem; right: 0.5rem; }
+  .floating-dice-blue { bottom: -5rem; left: 0.5rem; }
 }
